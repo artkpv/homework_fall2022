@@ -55,7 +55,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             self.mean_net = ptu.build_mlp(
                 input_size=self.ob_dim,
                 output_size=self.ac_dim,
-                n_layers=self.n_layers, size=self.size,
+                n_layers=self.n_layers, 
+                size=self.size,
             )
             self.mean_net.to(ptu.device)
             self.logstd = nn.Parameter(
@@ -75,13 +76,20 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     ##################################
 
     def get_action(self, obs: np.ndarray) -> np.ndarray:
+        if not isinstance(obs, np.ndarray):
+            obs = np.array(obs)
         if len(obs.shape) > 1:
             observation = obs
         else:
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        raise NotImplementedError
+        #raise NotImplementedError
+
+        if self.discrete:
+            return self.forward(torch.FloatTensor(observation)).max(dim=0).indices.detach().numpy()
+        return self.forward(torch.FloatTensor(observation)).detach().numpy()
+
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -93,7 +101,11 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        raise NotImplementedError
+        if not isinstance(observation, torch.FloatTensor):
+            observation = torch.FloatTensor(observation)
+        if self.discrete:
+            return self.logits_na(observation)
+        return self.mean_net(observation)
 
 
 #####################################################
@@ -109,7 +121,13 @@ class MLPPolicySL(MLPPolicy):
             adv_n=None, acs_labels_na=None, qvals=None
     ):
         # TODO: update the policy and return the loss
-        loss = TODO
+        if not isinstance(observations, torch.Tensor):
+            observations = torch.tensor(observations)
+        if not isinstance(actions, torch.Tensor):
+            actions = torch.tensor(actions)
+        pred = self(observations)
+        loss = self.loss(pred, actions)
+        self.optimizer.step()
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
