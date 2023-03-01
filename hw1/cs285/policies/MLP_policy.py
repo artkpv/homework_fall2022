@@ -104,8 +104,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         if not isinstance(observation, torch.FloatTensor):
             observation = torch.FloatTensor(observation)
         if self.discrete:
-            return self.logits_na(observation)
-        return self.mean_net(observation)
+            return F.softmax(self.logits_na(observation))
+        return F.softmax(self.mean_net(observation))
 
 
 #####################################################
@@ -125,8 +125,10 @@ class MLPPolicySL(MLPPolicy):
             observations = torch.tensor(observations)
         if not isinstance(actions, torch.Tensor):
             actions = torch.tensor(actions)
-        pred = self(observations)
+        pred = self.forward(observations)
         loss = self.loss(pred, actions)
+        self.optimizer.zero_grad()
+        loss.backward()
         self.optimizer.step()
         return {
             # You can add extra logging information here, but keep this line

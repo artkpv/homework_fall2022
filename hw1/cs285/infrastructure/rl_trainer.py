@@ -207,6 +207,8 @@ class RL_Trainer(object):
             train_log = self.agent.train(
                 ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch 
             )
+            if train_step % 100 == 0:
+                print(f'{train_log=} {self.agent.agent_params["learning_rate"]=}')
             all_logs.append(train_log)
         return all_logs
 
