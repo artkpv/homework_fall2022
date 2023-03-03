@@ -50,7 +50,7 @@ def build_mlp(
     #raise NotImplementedError
 
     layers = [ nn.Linear(input_size, size), activation ]
-    for l in range(n_layers):
+    for l in range(n_layers-1):
         layers += [nn.Linear(size, size), activation]
     layers += [nn.Linear(size, output_size), output_activation]
 

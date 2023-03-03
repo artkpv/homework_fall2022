@@ -86,9 +86,18 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # TODO return the action that the policy prescribes
         #raise NotImplementedError
 
+        observation = ptu.from_numpy(observation.astype(np.float32))
         if self.discrete:
             return self.forward(torch.FloatTensor(observation)).max(dim=0).indices.detach().numpy()
-        return self.forward(torch.FloatTensor(observation)).detach().numpy()
+        # Distribution:
+        #d = self(observation)
+        #return ptu.to_numpy(d.sample())
+
+        # MSE:
+        res = ptu.to_numpy(self.forward(observation))
+        res = np.maximum(res, -1.0)
+        res = np.minimum(res, 1.0)
+        return res
 
 
     # update/train this policy
@@ -101,12 +110,10 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        if not isinstance(observation, torch.FloatTensor):
-            observation = torch.FloatTensor(observation)
         if self.discrete:
-            return F.softmax(self.logits_na(observation))
-        return F.softmax(self.mean_net(observation))
-
+            return self.logits_na(observation)
+        # return distributions.Normal(loc=self.mean_net(observation), scale=self.logstd.exp())
+        return self.mean_net(observation)
 
 #####################################################
 #####################################################
@@ -121,12 +128,17 @@ class MLPPolicySL(MLPPolicy):
             adv_n=None, acs_labels_na=None, qvals=None
     ):
         # TODO: update the policy and return the loss
-        if not isinstance(observations, torch.Tensor):
-            observations = torch.tensor(observations)
-        if not isinstance(actions, torch.Tensor):
-            actions = torch.tensor(actions)
+        observations = ptu.from_numpy(observations)
+        actions = ptu.from_numpy(actions)
+
+        # Distribution:
+        #dist = self.forward(observations)
+        #loss = -dist.log_prob(actions).sum()
+
+        # MSE:
         pred = self.forward(observations)
         loss = self.loss(pred, actions)
+
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()

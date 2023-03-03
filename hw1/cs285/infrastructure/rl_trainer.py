@@ -188,7 +188,6 @@ class RL_Trainer(object):
 
         return paths, envsteps_this_batch, train_video_paths
 
-
     def train_agent(self):
         print('\nTraining agent using sampled data from replay buffer...')
         all_logs = []
@@ -218,7 +217,8 @@ class RL_Trainer(object):
         # TODO relabel collected obsevations (from our policy) with labels from an expert policy
         # HINT: query the policy (using the get_action function) with paths[i]["observation"]
         # and replace paths[i]["action"] with these expert labels
-
+        for i in range(len(paths)):
+            paths[i]['action'] = expert_policy.get_action(paths[i]['observation'])
         return paths
 
     ####################################
@@ -268,7 +268,7 @@ class RL_Trainer(object):
 
             logs["Train_EnvstepsSoFar"] = self.total_envsteps
             logs["TimeSinceStart"] = time.time() - self.start_time
-            logs["Eval_by_Train_AvgReturn"] =  logs["Eval_AverageReturn"] / logs["Train_AverageReturn"]
+
             last_log = training_logs[-1]  # Only use the last log for now
             logs.update(last_log)
 
@@ -276,6 +276,7 @@ class RL_Trainer(object):
             if itr == 0:
                 self.initial_return = np.mean(train_returns)
             logs["Initial_DataCollection_AverageReturn"] = self.initial_return
+            logs["Return_Train_by_Expert"] =  logs["Eval_AverageReturn"] / logs["Initial_DataCollection_AverageReturn"]
 
             # perform the logging
             for key, value in logs.items():
